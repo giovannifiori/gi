@@ -26,7 +26,7 @@ func generateGitIgnore(cmd *cobra.Command, args []string) {
 
 	resp, err := http.Get(fmt.Sprintf("https://www.toptal.com/developers/gitignore/api/%s", subject))
 	if err != nil {
-		fmt.Println("Error fetching .gitignore file from Toptal API", err)
+		fmt.Println("Error fetching .gitignore file from API", err)
 		os.Exit(2)
 	}
 	defer resp.Body.Close()
@@ -37,8 +37,18 @@ func generateGitIgnore(cmd *cobra.Command, args []string) {
 	}
 
 	body, err := io.ReadAll(resp.Body)
-	fileContents := string(body)
-	fmt.Println(fileContents)
+	if err != nil {
+		fmt.Println("Error reading .gitignore file from API", err)
+		os.Exit(3)
+	}
+
+	err = os.WriteFile(".gitignore", body, 0644)
+	if err != nil {
+		fmt.Println("Error writing .gitignore file", err)
+		os.Exit(4)
+	}
+
+	fmt.Printf("Generated .gitignore file for %s", subject)
 }
 
 func Execute() {
