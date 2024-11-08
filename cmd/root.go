@@ -4,10 +4,12 @@ Copyright © 2024 giovannifiori <gf@gfiori.dev>
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -22,6 +24,24 @@ var rootCmd = &cobra.Command{
 }
 
 func generateGitIgnore(cmd *cobra.Command, args []string) {
+	if _, err := os.Stat(".gitignore"); err == nil {
+		fmt.Printf("A .gitignore file already exists in this directory. Overwrite it? [y/N]: ")
+		reader := bufio.NewReader(os.Stdin)
+		response, _ := reader.ReadString('\n')
+		response = strings.ToLower(strings.Trim(strings.Replace(response, "\n", "", -1), " "))
+
+		for response != "y" && response != "n" && response != "Y" && response != "N" && response != "" {
+			fmt.Printf("A .gitignore file already exists in this directory. Overwrite it? [y/N]: ")
+			response, _ = reader.ReadString('\n')
+			response = strings.ToLower(strings.Trim(strings.Replace(response, "\n", "", -1), " "))
+		}
+
+		if response != "y" {
+			fmt.Println("Exiting...")
+			os.Exit(0)
+		}
+	}
+
 	subject := args[0]
 
 	resp, err := http.Get(fmt.Sprintf("https://www.toptal.com/developers/gitignore/api/%s", subject))
