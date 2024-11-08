@@ -1,6 +1,6 @@
 # gi
 
-A CLI tool built with Go and Cobra to create `.gitignore` files.
+A CLI tool built with [Go](https://github.com/golang/go) and [Cobra](https://github.com/spf13/cobra) to create `.gitignore` files.
 
 ## Description
 
