@@ -4,13 +4,12 @@ Copyright © 2024 giovannifiori <gf@gfiori.dev>
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"strings"
 
+	"github.com/erikgeiser/promptkit/selection"
 	"github.com/spf13/cobra"
 )
 
@@ -24,31 +23,10 @@ var rootCmd = &cobra.Command{
 }
 
 func generateGitIgnore(cmd *cobra.Command, args []string) {
-	if _, err := os.Stat(".gitignore"); err == nil {
-		fmt.Printf("A .gitignore file already exists in this directory. Overwrite it? [y/N]: ")
-		reader := bufio.NewReader(os.Stdin)
-		response, _ := reader.ReadString('\n')
-		response = strings.ToLower(strings.Trim(strings.Replace(response, "\n", "", -1), " "))
-
-		for response != "y" && response != "n" && response != "Y" && response != "N" && response != "" {
-			fmt.Printf("A .gitignore file already exists in this directory. Overwrite it? [y/N]: ")
-			response, _ = reader.ReadString('\n')
-			response = strings.ToLower(strings.Trim(strings.Replace(response, "\n", "", -1), " "))
-		}
-
-		if response != "y" {
-			fmt.Println("Exiting...")
-			os.Exit(0)
-		}
-	}
-
 	subject := args[0]
 
 	resp, err := http.Get(fmt.Sprintf("https://www.toptal.com/developers/gitignore/api/%s", subject))
-	if err != nil {
-		fmt.Println("Error fetching .gitignore file from API", err)
-		os.Exit(2)
-	}
+	cobra.CheckErr(err)
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 404 {
@@ -56,19 +34,37 @@ func generateGitIgnore(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	if resp.StatusCode != 200 {
+		fmt.Printf("Failed to fetch .gitignore file for %s\n", subject)
+		os.Exit(1)
+	}
+
 	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading .gitignore file from API", err)
-		os.Exit(3)
-	}
+	cobra.CheckErr(err)
 
-	err = os.WriteFile(".gitignore", body, 0644)
-	if err != nil {
-		fmt.Println("Error writing .gitignore file", err)
-		os.Exit(4)
-	}
+	if _, err := os.Stat(".gitignore"); err == nil {
+		sp := selection.New("A .gitignore file already exists in this directory. Overwrite or append to it?", []string{"Append", "Overwrite"})
+		sp.Filter = nil
+		choice, err := sp.RunPrompt()
+		cobra.CheckErr(err)
 
-	fmt.Printf("Generated .gitignore file for %s", subject)
+		if choice == "Append" {
+			f, err := os.OpenFile(".gitignore", os.O_APPEND|os.O_WRONLY, 0644)
+			cobra.CheckErr(err)
+			defer f.Close()
+
+			_, err = f.Write(body)
+			cobra.CheckErr(err)
+
+			fmt.Printf("Appended to .gitignore file with the contents for %s\n", subject)
+		} else {
+			err = os.WriteFile(".gitignore", body, 0644)
+			cobra.CheckErr(err)
+
+			fmt.Printf("Generated .gitignore file for %s\n", subject)
+		}
+
+	}
 }
 
 func Execute() {
