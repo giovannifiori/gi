@@ -49,22 +49,35 @@ func generateGitIgnore(cmd *cobra.Command, args []string) {
 		cobra.CheckErr(err)
 
 		if choice == "Append" {
-			f, err := os.OpenFile(".gitignore", os.O_APPEND|os.O_WRONLY, 0644)
+			err = appendToGitIgnoreFile(body)
 			cobra.CheckErr(err)
-			defer f.Close()
-
-			_, err = f.Write(body)
-			cobra.CheckErr(err)
-
 			fmt.Printf("Appended to .gitignore file with the contents for %s\n", subject)
 		} else {
-			err = os.WriteFile(".gitignore", body, 0644)
+			err = writeGitIgnoreFile(body)
 			cobra.CheckErr(err)
-
 			fmt.Printf("Generated .gitignore file for %s\n", subject)
 		}
-
+	} else {
+		err = writeGitIgnoreFile(body)
+		cobra.CheckErr(err)
+		fmt.Printf("Generated .gitignore file for %s\n", subject)
 	}
+}
+
+func writeGitIgnoreFile(data []byte) error {
+	err := os.WriteFile(".gitignore", data, 0644)
+	return err
+}
+
+func appendToGitIgnoreFile(data []byte) error {
+	f, err := os.OpenFile(".gitignore", os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.Write(data)
+	return err
 }
 
 func Execute() {
