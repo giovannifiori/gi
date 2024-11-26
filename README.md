@@ -25,6 +25,12 @@ Here are some examples of how to use `gi`:
 gi go
 ```
 
+### Generate a `.gitignore` file choosing from a list of options
+
+```sh
+gi
+```
+
 ## Contributing
 
 We welcome contributions to `gi`. If you would like to contribute, please follow these steps:
