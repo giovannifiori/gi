@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/erikgeiser/promptkit/selection"
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
@@ -43,12 +43,20 @@ func generateGitIgnore(cmd *cobra.Command, args []string) {
 	cobra.CheckErr(err)
 
 	if _, err := os.Stat(".gitignore"); err == nil {
-		sp := selection.New("A .gitignore file already exists in this directory. Overwrite or append to it?", []string{"Append", "Overwrite"})
-		sp.Filter = nil
-		choice, err := sp.RunPrompt()
+		var choice string
+		form := huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("A .gitignore file already exists in this directory. Overwrite or append to it?").
+					Options(huh.NewOption("Append", "append"), huh.NewOption("Overwrite", "overwrite")).
+					Value(&choice),
+			),
+		)
+
+		err := form.Run()
 		cobra.CheckErr(err)
 
-		if choice == "Append" {
+		if choice == "append" {
 			err = appendToGitIgnoreFile(body)
 			cobra.CheckErr(err)
 			fmt.Printf("Appended to .gitignore file with the contents for %s\n", subject)
