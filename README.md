@@ -25,6 +25,12 @@ Here are some examples of how to use `gi`:
 gi go
 ```
 
+### Generate a `.gitignore` file for a Node project in a MacOS environment
+
+```sh
+gi go macos
+```
+
 ### Generate a `.gitignore` file choosing from a list of options
 
 ```sh

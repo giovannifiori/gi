@@ -20,15 +20,21 @@ var rootCmd = &cobra.Command{
 	Use:   "gi",
 	Short: "Quickly generate .gitignore files with one command",
 	Long:  `gi is a CLI tool that saves you time by quickly generating .gitignore files for your projects with sane defaults from the Toptal API.`,
-	Args:  cobra.MaximumNArgs(1),
 	Run:   run,
 }
 
 func run(cmd *cobra.Command, args []string) {
-	subject, err := getSubject(args)
+	subjects, err := getSubjects(args)
 	cobra.CheckErr(err)
 
-	fileContents, err := getFileContents(subject)
+	if len(subjects) == 0 {
+		fmt.Println("No subject selected. Exiting...")
+		os.Exit(0)
+	}
+
+	formattedSubjects := strings.Join(subjects, ",")
+
+	fileContents, err := getFileContents(subjects)
 	cobra.CheckErr(err)
 
 	if _, err := os.Stat(".gitignore"); err == nil {
@@ -48,49 +54,51 @@ func run(cmd *cobra.Command, args []string) {
 		if choice == "append" {
 			err = appendToGitIgnoreFile(fileContents)
 			cobra.CheckErr(err)
-			fmt.Printf("Appended to .gitignore file with the content for %s\n", subject)
+			fmt.Printf("Appended to .gitignore file with the content for %s\n", formattedSubjects)
 		} else {
 			err = writeGitIgnoreFile(fileContents)
 			cobra.CheckErr(err)
-			fmt.Printf("Overwritten .gitignore file with the content for %s\n", subject)
+			fmt.Printf("Overwritten .gitignore file with the content for %s\n", formattedSubjects)
 		}
 	} else {
 		err = writeGitIgnoreFile(fileContents)
 		cobra.CheckErr(err)
-		fmt.Printf("Generated .gitignore file for %s\n", subject)
+		fmt.Printf("Generated .gitignore file for %s\n", formattedSubjects)
 	}
 }
 
-func getFileContents(subject string) (body []byte, err error) {
-	resp, err := http.Get(fmt.Sprintf("https://www.toptal.com/developers/gitignore/api/%s", subject))
+func getFileContents(subjects []string) (body []byte, err error) {
+	parsedSubjects := strings.Join(subjects, ",")
+	resp, err := http.Get(fmt.Sprintf("https://www.toptal.com/developers/gitignore/api/%s", parsedSubjects))
 	defer resp.Body.Close()
+
 	if err != nil {
 		return nil, err
 	}
 
 	if resp.StatusCode == 404 {
-		return nil, errors.New(fmt.Sprintf("No .gitignore content found for %s\n", subject))
+		return nil, errors.New(fmt.Sprintf("No .gitignore content found for %s\n", parsedSubjects))
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("Failed to fetch .gitignore file for %s\n", subject))
+		return nil, errors.New(fmt.Sprintf("Failed to fetch .gitignore file for %s\n", parsedSubjects))
 	}
 
 	return io.ReadAll(resp.Body)
 }
 
-func getSubject(args []string) (string, error) {
-	var subject string
+func getSubjects(args []string) ([]string, error) {
+	var subjects []string
 
-	if len(args) == 1 {
-		return args[0], nil
+	if len(args) > 0 {
+		return args, nil
 	}
 
 	subjectForm := huh.NewForm(
 		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Generate .gitignore for...").
-				Value(&subject).
+			huh.NewMultiSelect[string]().
+				Title("Generate .gitignore for: ").
+				Value(&subjects).
 				OptionsFunc(func() []huh.Option[string] {
 					resp, err := http.Get("https://www.toptal.com/developers/gitignore/api/list")
 					cobra.CheckErr(err)
@@ -115,10 +123,10 @@ func getSubject(args []string) (string, error) {
 
 	err := subjectForm.Run()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return subject, nil
+	return subjects, nil
 }
 
 func writeGitIgnoreFile(data []byte) error {
