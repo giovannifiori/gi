@@ -28,7 +28,7 @@ gi go
 ### Generate a `.gitignore` file for a Node project in a MacOS environment
 
 ```sh
-gi go macos
+gi node macos
 ```
 
 ### Generate a `.gitignore` file choosing from a list of options
