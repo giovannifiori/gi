@@ -4,7 +4,6 @@ Copyright © 2024 giovannifiori <gf@gfiori.dev>
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -70,18 +69,18 @@ func run(cmd *cobra.Command, args []string) {
 func getFileContents(subjects []string) (body []byte, err error) {
 	parsedSubjects := strings.Join(subjects, ",")
 	resp, err := http.Get(fmt.Sprintf("https://www.toptal.com/developers/gitignore/api/%s", parsedSubjects))
-	defer resp.Body.Close()
-
 	if err != nil {
 		return nil, err
 	}
 
+	defer resp.Body.Close()
+
 	if resp.StatusCode == 404 {
-		return nil, errors.New(fmt.Sprintf("No .gitignore content found for %s\n", parsedSubjects))
+		return nil, fmt.Errorf("no .gitignore content found for %s", parsedSubjects)
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("Failed to fetch .gitignore file for %s\n", parsedSubjects))
+		return nil, fmt.Errorf("failed to fetch .gitignore file for %s", parsedSubjects)
 	}
 
 	return io.ReadAll(resp.Body)
@@ -114,7 +113,7 @@ func getSubjects(args []string) ([]string, error) {
 
 					optsStr := string(optsBodyBytes)
 
-					var opts []string = strings.Split(strings.Join(strings.Split(optsStr, "\n"), ","), ",")
+					opts := strings.Split(strings.Join(strings.Split(optsStr, "\n"), ","), ",")
 
 					return huh.NewOptions(opts...)
 				}, nil),
